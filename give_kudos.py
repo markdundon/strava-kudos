@@ -47,11 +47,11 @@ class KudosGiver:
         self.page.get_by_role("textbox", name="email").fill(self.EMAIL)
         print("✅ Email filled")
 
-        # Fill password - multiple fallback selectors
+        # Fill password - multiple fallback selectors + debug
         password_filled = False
-        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]']:
+        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]', 'input[autocomplete="current-password"]']:
             try:
-                self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
+                self.page.locator(selector).fill(self.PASSWORD, timeout=8000)
                 password_filled = True
                 print("✅ Password filled")
                 break
@@ -59,6 +59,8 @@ class KudosGiver:
                 continue
 
         if not password_filled:
+            print("❌ Password field not found with standard selectors. Taking screenshot for debugging...")
+            self.page.screenshot(path="login_failure.png")
             raise Exception("❌ Could not find password field - Strava login page may have changed")
 
         # Click Log In button
