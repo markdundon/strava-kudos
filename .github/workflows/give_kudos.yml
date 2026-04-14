@@ -17,7 +17,7 @@ env:
 jobs:
   run-kudos-cron:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
 
@@ -26,15 +26,32 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
-      - name: Install dependencies
+      - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      - name: Install Playwright browsers and dependencies
+      - name: Install system dependencies for Playwright (Ubuntu 24.04 fix)
         run: |
-          python -m playwright install --with-deps chromium
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 \
+            libatk-bridge2.0-0 \
+            libdrm2 \
+            libxcomposite1 \
+            libxdamage1 \
+            libxrandr2 \
+            libgbm1 \
+            libasound2t64 \
+            libgtk-3-0t64 \
+            libxshmfence1 \
+            libxss1
+
+      - name: Install Playwright browsers
+        run: python -m playwright install chromium
 
       - name: Run kudos script
         run: python give_kudos.py
         env:
           STRAVA_EMAIL: ${{ secrets.STRAVA_EMAIL }}
           STRAVA_PASSWORD: ${{ secrets.STRAVA_PASSWORD }}
+
+          
