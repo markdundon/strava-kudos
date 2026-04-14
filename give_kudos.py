@@ -29,7 +29,7 @@ class KudosGiver:
         self.page = self.browser.new_page()
 
 
-        def email_login(self):
+    def email_login(self):
         """Login using email and password"""
         print("🔑 Logging into Strava...")
         self.page.goto(os.path.join(BASE_URL, 'login'))
@@ -40,28 +40,18 @@ class KudosGiver:
         except:
             pass
 
-        # Wait for the page to settle
+        # Wait for the page to load
         self.page.wait_for_load_state("networkidle", timeout=15000)
 
         # Fill email
         self.page.get_by_role("textbox", name="email").fill(self.EMAIL)
         print("✅ Email filled")
 
-        # Fill password - try multiple possible selectors (Strava changes often)
+        # Fill password - multiple fallback selectors
         password_filled = False
-        password_selectors = [
-            'input[type="password"]',
-            'input[name="password"]',
-            get_by_role("textbox", name=re.compile("password", re.I)),
-            '[placeholder*="Password" i]'
-        ]
-
-        for selector in password_selectors:
+        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]']:
             try:
-                if isinstance(selector, str):
-                    self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
-                else:
-                    selector.fill(self.PASSWORD, timeout=10000)
+                self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
                 password_filled = True
                 print("✅ Password filled")
                 break
@@ -69,13 +59,13 @@ class KudosGiver:
                 continue
 
         if not password_filled:
-            raise Exception("❌ Could not locate password field - Strava login page likely changed")
+            raise Exception("❌ Could not find password field - Strava login page may have changed")
 
         # Click Log In button
         self.page.get_by_role("button", name=re.compile("log in|sign in", re.I)).click(timeout=10000)
         print("✅ Login button clicked")
 
-        # Wait for successful redirect to dashboard/feed
+        # Wait for successful login (dashboard or feed)
         self.page.wait_for_url("**/dashboard** OR **/feed**", timeout=20000)
         print("🎉 Login successful!")
         
