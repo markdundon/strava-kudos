@@ -1,5 +1,6 @@
 import os
 import time
+import re
 
 from playwright.sync_api import sync_playwright
 
@@ -28,20 +29,55 @@ class KudosGiver:
         self.page = self.browser.new_page()
 
 
-    def email_login(self):
-        """
-        Login using email and password
-        """
+        def email_login(self):
+        """Login using email and password"""
+        print("🔑 Logging into Strava...")
         self.page.goto(os.path.join(BASE_URL, 'login'))
+
+        # Handle cookie consent if present
         try:
             self.page.get_by_role("button", name="Reject").click(timeout=5000)
-        except Exception as _:
+        except:
             pass
-        self.page.get_by_role("textbox", name='email').fill(self.EMAIL)
-        self.page.get_by_role("textbox", name="password").fill(self.PASSWORD)
-        self.page.get_by_role("button", name="Log In").click()
-        print("---Logged in!!---")
-        self._run_with_retries(func=self._get_page_and_own_profile)
+
+        # Wait for the page to settle
+        self.page.wait_for_load_state("networkidle", timeout=15000)
+
+        # Fill email
+        self.page.get_by_role("textbox", name="email").fill(self.EMAIL)
+        print("✅ Email filled")
+
+        # Fill password - try multiple possible selectors (Strava changes often)
+        password_filled = False
+        password_selectors = [
+            'input[type="password"]',
+            'input[name="password"]',
+            get_by_role("textbox", name=re.compile("password", re.I)),
+            '[placeholder*="Password" i]'
+        ]
+
+        for selector in password_selectors:
+            try:
+                if isinstance(selector, str):
+                    self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
+                else:
+                    selector.fill(self.PASSWORD, timeout=10000)
+                password_filled = True
+                print("✅ Password filled")
+                break
+            except:
+                continue
+
+        if not password_filled:
+            raise Exception("❌ Could not locate password field - Strava login page likely changed")
+
+        # Click Log In button
+        self.page.get_by_role("button", name=re.compile("log in|sign in", re.I)).click(timeout=10000)
+        print("✅ Login button clicked")
+
+        # Wait for successful redirect to dashboard/feed
+        self.page.wait_for_url("**/dashboard** OR **/feed**", timeout=20000)
+        print("🎉 Login successful!")
         
     def _run_with_retries(self, func, retries=3):
         """
