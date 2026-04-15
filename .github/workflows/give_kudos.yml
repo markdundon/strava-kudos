@@ -54,4 +54,12 @@ jobs:
           STRAVA_EMAIL: ${{ secrets.STRAVA_EMAIL }}
           STRAVA_PASSWORD: ${{ secrets.STRAVA_PASSWORD }}
 
+      - name: Upload failure screenshot if any
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: login-failure-screenshot
+          path: strava_login_failure.png
+       
+
           
