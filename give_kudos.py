@@ -55,20 +55,41 @@ class KudosGiver:
         except:
             print("No 'Use password instead' link - trying direct password")
 
-        # Fill password
+        # Fill password with aggressive debugging
+        print("🔍 Looking for password field...")
         password_filled = False
-        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]', 'input[autocomplete="current-password"]']:
+
+        # Take screenshot before trying password (for debugging)
+        self.page.screenshot(path="strava_before_password.png")
+
+        selectors = [
+            'input[type="password"]',
+            'input[name="password"]',
+            'input[autocomplete="current-password"]',
+            '[placeholder*="Password" i]',
+            'input[data-testid*="password"]',
+            get_by_role("textbox", name=re.compile("password", re.I))
+        ]
+
+        for selector in selectors:
             try:
-                self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
+                if isinstance(selector, str):
+                    element = self.page.locator(selector)
+                    element.wait_for(state="visible", timeout=5000)
+                    element.fill(self.PASSWORD, timeout=10000)
+                else:
+                    selector.fill(self.PASSWORD, timeout=10000)
                 password_filled = True
-                print("✅ Password filled")
+                print("✅ Password filled successfully")
                 break
-            except:
+            except Exception as e:
+                print(f"Selector failed: {selector}")
                 continue
 
         if not password_filled:
+            print("❌ All selectors failed. Taking final screenshot...")
             self.page.screenshot(path="strava_login_failure.png")
-            raise Exception("❌ Could not find password field")
+            raise Exception("Could not find password field")
 
         # Click Log In button
         self.page.get_by_role("button", name=re.compile("log in|sign in", re.I)).click(timeout=10000)
