@@ -29,29 +29,36 @@ class KudosGiver:
         self.page = self.browser.new_page()
 
 
-    def email_login(self):
+        def email_login(self):
         """Login using email and password"""
         print("🔑 Logging into Strava...")
         self.page.goto(os.path.join(BASE_URL, 'login'))
 
-        # Handle cookie consent if present
+        # Handle cookie consent
         try:
             self.page.get_by_role("button", name="Reject").click(timeout=5000)
         except:
             pass
 
-        # Wait for the page to load
         self.page.wait_for_load_state("networkidle", timeout=15000)
 
         # Fill email
         self.page.get_by_role("textbox", name="email").fill(self.EMAIL)
         print("✅ Email filled")
 
-        # Fill password - multiple fallback selectors + debug screenshot
+        # Click "Use password instead" if shown
+        try:
+            self.page.get_by_role("link", name=re.compile("use password instead", re.I)).click(timeout=8000)
+            print("✅ Clicked 'Use password instead'")
+            self.page.wait_for_timeout(2000)
+        except:
+            print("No 'Use password instead' link found - trying direct password field")
+
+        # Now fill password
         password_filled = False
-        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]', 'input[autocomplete="current-password"]', '[data-testid*="password"]']:
+        for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]', 'input[autocomplete="current-password"]']:
             try:
-                self.page.locator(selector).fill(self.PASSWORD, timeout=8000)
+                self.page.locator(selector).fill(self.PASSWORD, timeout=10000)
                 password_filled = True
                 print("✅ Password filled")
                 break
@@ -59,17 +66,14 @@ class KudosGiver:
                 continue
 
         if not password_filled:
-            print("❌ Password field not found. Taking screenshot for debugging...")
             self.page.screenshot(path="strava_login_failure.png")
-            # Upload screenshot as artifact so we can download it
-            print("Screenshot saved as strava_login_failure.png")
-            raise Exception("❌ Could not find password field - Strava login page may have changed")
+            raise Exception("❌ Could not find password field even after 'Use password instead'")
 
         # Click Log In button
         self.page.get_by_role("button", name=re.compile("log in|sign in", re.I)).click(timeout=10000)
         print("✅ Login button clicked")
 
-        # Wait for successful login (dashboard or feed)
+        # Wait for successful login
         self.page.wait_for_url("**/dashboard** OR **/feed**", timeout=20000)
         print("🎉 Login successful!")
         
