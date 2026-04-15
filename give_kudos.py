@@ -29,32 +29,33 @@ class KudosGiver:
         self.page = self.browser.new_page()
 
 
-        def email_login(self):
+    def email_login(self):
         """Login using email and password"""
         print("🔑 Logging into Strava...")
         self.page.goto(os.path.join(BASE_URL, 'login'))
 
-        # Handle cookie consent
+        # Handle cookie consent if present
         try:
             self.page.get_by_role("button", name="Reject").click(timeout=5000)
         except:
             pass
 
+        # Wait for the page to load
         self.page.wait_for_load_state("networkidle", timeout=15000)
 
         # Fill email
         self.page.get_by_role("textbox", name="email").fill(self.EMAIL)
         print("✅ Email filled")
 
-        # Click "Use password instead" if shown
+        # Click "Use password instead" if shown (important for current Strava page)
         try:
             self.page.get_by_role("link", name=re.compile("use password instead", re.I)).click(timeout=8000)
             print("✅ Clicked 'Use password instead'")
             self.page.wait_for_timeout(2000)
         except:
-            print("No 'Use password instead' link found - trying direct password field")
+            print("No 'Use password instead' link - trying direct password")
 
-        # Now fill password
+        # Fill password
         password_filled = False
         for selector in ['input[type="password"]', 'input[name="password"]', '[placeholder*="Password" i]', 'input[autocomplete="current-password"]']:
             try:
@@ -67,7 +68,7 @@ class KudosGiver:
 
         if not password_filled:
             self.page.screenshot(path="strava_login_failure.png")
-            raise Exception("❌ Could not find password field even after 'Use password instead'")
+            raise Exception("❌ Could not find password field")
 
         # Click Log In button
         self.page.get_by_role("button", name=re.compile("log in|sign in", re.I)).click(timeout=10000)
